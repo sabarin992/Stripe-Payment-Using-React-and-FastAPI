@@ -50,6 +50,10 @@ def mock_payment(payment: PaymentRequest):
     }
 
 # endpoint for create payment intent
+'''
+This creates a PaymentIntent; it does not complete the payment yet. Don't expose the secret API key in React
+'''
+
 @app.post("/payments/create-intent")
 def create_payment_intent():
     if not stripe.api_key:
