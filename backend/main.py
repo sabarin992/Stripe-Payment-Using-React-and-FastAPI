@@ -3,8 +3,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from uuid import uuid4
+import os
+import stripe
+from dotenv import load_dotenv
+from fastapi import HTTPException
 
 app = FastAPI()
+
+load_dotenv()
+
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 app.add_middleware(
     CORSMiddleware,
@@ -40,3 +48,32 @@ def mock_payment(payment: PaymentRequest):
         "status": "succeeded",
         "message": "Mock payment successful",
     }
+
+# endpoint for create payment intent
+@app.post("/payments/create-intent")
+def create_payment_intent():
+    if not stripe.api_key:
+        raise HTTPException(
+            status_code=500,
+            detail="Stripe secret key is not configured",
+        )
+
+    try:
+        intent = stripe.PaymentIntent.create(
+            amount=200,
+            currency="usd",
+            automatic_payment_methods={"enabled": True},
+        )
+
+        return {
+            "payment_intent_id": intent.id,
+            "client_secret": intent.client_secret,
+            "amount": intent.amount,
+            "currency": intent.currency,
+        }
+
+    except stripe.StripeError:
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to create Stripe PaymentIntent",
+        )
